@@ -1,19 +1,14 @@
 require "open3"
 include Open3
 
-class IO
-  def ready_for_read?
-    result = IO.select([self], nil, nil, 0.002)
-    result && (result.first.first == self)
-  end
-end
-
 module Calc
   
   @bufferedStatement = ''
+  @scopeDepth = 0
   
   def Calc::process
-    @stdin, @stdout, @stderr = Open3.popen3('bc -l')
+    @stdin, @stdout, @stderr = Open3.popen3('bc -l 2>&1')
+    
     ARGF.each_with_index do |line, index|
       # find statements in line
       if line[0] == "\t" || line[0..3] == "    "
@@ -30,6 +25,7 @@ module Calc
         puts line
       end
     end
+      
     @stdin.close
     @stderr.close
     @stdout.close
@@ -43,6 +39,23 @@ module Calc
         return statement
       end
       
+      beginCount = statement.scan("{").count;
+      if beginCount > 0
+        @scopeDepth += beginCount
+      end
+
+      endCount = statement.scan("}").count;
+      if endCount > 0
+        @scopeDepth -= endCount
+        if @scopeDepth < 0
+          @scopeDepth = 0
+        end
+      end
+      if(@scopeDepth > 0) 
+        @bufferedStatement = @bufferedStatement.strip().gsub(/!?\=>.*$/, '') + ";"
+        return statement
+      end
+      
       preprocessedStatement = preprocessStatement(@bufferedStatement)
       @bufferedStatement = ''
       if(preprocessedStatement == "")
@@ -50,25 +63,21 @@ module Calc
       end
       # puts "PROCESS "+preprocessedStatement
       @stdin.puts preprocessedStatement
+      @stdin.puts "\"xENDCOMMAND\n\""
       @stdin.flush
       # Get last line of error and result
-      error = ""
-      while @stderr.ready_for_read?
-        error = @stderr.gets
-        # puts "ERROR "+error
-      end
       result = ""
-      while @stdout.ready_for_read?
-        result = @stdout.gets
+      while (input = @stdout.gets) != "xENDCOMMAND\n"
+        result = input
         # puts "RESULT "+result
       end
-      error.strip!
       result.strip!
-      if error != ""
+
+      if result.scan(":").count > 0
         if(statement.scan("=>").count > 0) 
-          return statement.gsub /\=>.*$/, '=> ' + formatResult(error)
+          return statement.gsub /\=>.*$/, '=> ' + formatResult(result)
         else
-          return statement.chomp + ' !=> ' + formatResult(error)
+          return statement.chomp + ' !=> ' + formatResult(result)
         end 
       else 
         if(statement.scan("!=>").count > 0) 
@@ -83,7 +92,7 @@ module Calc
   def Calc::formatResult(result)
     if result.count(":") > 0
       result = result.split(":")
-      result = "Error: "+result[1]
+      result = "Error: "+result[1].strip
     else
       result = humanNumber(result.to_f)
     end
@@ -93,10 +102,14 @@ module Calc
   
   def Calc::preprocessStatement(input)
     result = input.strip().gsub(/!?\=>.*$/, '')\
-         .gsub(',', '')\
+         .gsub("\"", "")\
+         .gsub("x", "xx")\
+         .downcase\
+         .gsub(/,([0-9]{3})/, '\1')\
          .inspect.gsub(/^"/, "").gsub(/"$/, "")\
          .gsub("\\", "x")\
          .gsub(/([0-9])%/, '\1/100')
+
      while result.match /([a-zA-Z][a-zA-Z0-9]*)( +?)([a-zA-Z])/ do
        result.gsub!(/([a-zA-Z][a-zA-Z0-9]*)( +?)([a-zA-Z])/, '\1_\3')
      end
