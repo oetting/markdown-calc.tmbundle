@@ -33,16 +33,22 @@ module Calc
   
   def Calc::processLine(line)
     line.split(";").map{|statement| 
+      @bufferedStatement += ' ' + statement.strip().gsub(/!?\=>.*$/, '')
+
       # Allow statements to span lines if a line ends with a operator
-      @bufferedStatement += ' ' + statement.strip()
-      if statement.strip().match(/[+-\/*^]$/)
-        return statement
+      if statement.strip().match(/[-|+|*|\\|\/]$/) != nil
+        return statement.gsub(/!\=>.*$/, '')
       end
       
       beginCount = statement.scan("{").count;
       if beginCount > 0
         @scopeDepth += beginCount
       end
+
+      if(@scopeDepth > 0) 
+        statement = statement.gsub(/!\=>.*$/, '')
+      end
+
 
       endCount = statement.scan("}").count;
       if endCount > 0
@@ -51,12 +57,13 @@ module Calc
           @scopeDepth = 0
         end
       end
+      
       if(@scopeDepth > 0) 
-        @bufferedStatement = @bufferedStatement.strip().gsub(/!?\=>.*$/, '') + ";"
         return statement
       end
       
       preprocessedStatement = preprocessStatement(@bufferedStatement)
+      
       @bufferedStatement = ''
       if(preprocessedStatement == "")
         return statement
@@ -104,17 +111,18 @@ module Calc
     result = input.strip().gsub(/!?\=>.*$/, '')\
          .gsub("\"", "")\
          .gsub("x", "xx")\
+         .gsub("_", "__")\
          .downcase\
          .gsub(/,([0-9]{3})/, '\1')\
          .inspect.gsub(/^"/, "").gsub(/"$/, "")\
          .gsub("\\", "x")\
          .gsub(/([0-9])%/, '\1/100')
 
-     while result.match /([a-zA-Z][a-zA-Z0-9]*)( +?)([a-zA-Z])/ do
-       result.gsub!(/([a-zA-Z][a-zA-Z0-9]*)( +?)([a-zA-Z])/, '\1_\3')
+     while result.match /([a-zA-Z][a-zA-Z0-9_]*)( +?)([a-zA-Z])/ do
+       result.gsub!(/([a-zA-Z][a-zA-Z0-9_]*)( +?)([a-zA-Z])/, '\1_\3')
      end
-     result.gsub!(/define_([a-zA-Z_][a-zA-Z0-9_]*) *\(/, 'define \1 (')
-     result.gsub!(/return_([a-zA-Z0-9_]+)/, 'return \1')
+     result.gsub!(/define_([a-zA-Z][a-zA-Z0-9_]*) *\(/, 'define \1 (')
+     result.gsub!(/return_([a-zA-Z][a-zA-Z0-9_]*)/, 'return \1')
 
      if result.count("=") > 0 
        result = "(" + result + ")"
