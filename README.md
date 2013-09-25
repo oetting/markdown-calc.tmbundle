@@ -24,7 +24,7 @@ Shows that my monthly payment will be `monthly payment => 4,426.1336`
 
 ## Usage
 
-Calculations in a markdown file are triggered by ctrl+shift+c.
+Calculations in a markdown file are triggered by `ctrl+shift+c`.
 
 Write your math in markdown code blocks, that is either inline delimited by ` ` or indented by a tab or four spaces. Like so:
 
@@ -40,7 +40,7 @@ You can define functions using the following syntax.
 
     define sum(a, b) {
         return a + b   
-    }  
+    }         
 
     sum(2, 1) => 3.0
     
