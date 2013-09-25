@@ -9,6 +9,8 @@ module Calc
   def Calc::process
     @stdin, @stdout, @stderr = Open3.popen3('bc -l 2>&1')
     
+    initializeFunctions
+    
     ARGF.each_with_index do |line, index|
       # find statements in line
       if line[0] == "\t" || line[0..3] == "    "
@@ -134,6 +136,13 @@ module Calc
     output = ((input * 10000).round/10000.0).to_s.split(".")
     while output[0].sub!(/(\d+)(\d\d\d)/,'\1,\2'); end
     output[0]+"."+output[1]
+  end
+
+  def Calc::initializeFunctions
+    @stdin.puts("define pi() { return a(1) * 4 }")
+    @stdin.puts("define sin(x) { return s(x) }")
+    @stdin.puts("define cos(x) { return c(x) }")
+    @stdin.puts("define arctan(x) { return a(x) }")
   end
 
 end
