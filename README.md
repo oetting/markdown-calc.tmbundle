@@ -51,6 +51,14 @@ There are a few built in functions
     cos(pi()) => -1.0
     arctan(1) => 0.7854
     sqrt(9) => 3.0
+    
+## Installation
+
+Install via Git:
+
+    mkdir -p ~/Library/Application\ Support/Avian/Bundles
+    cd ~/Library/Application\ Support/Avian/Bundles
+    git clone git://github.com/oetting/markdown-calc.tmbundle Markdown\ Calc.tmbundle
 
 ## Notes
 
